@@ -22,10 +22,19 @@
                 <h4>Hussaini Cricket Club Delhi</h4>
             </div>
             <h1 class="auction-title">CRICKET AUCTION <span class="year-tag">Hassan Trophy 2026</span></h1>
-            <div class="header-right">
-                <button class="btn-glass" id="addPlayerModalBtn" data-bs-toggle="modal" data-bs-target="#addPlayerModal">+ Add Player</button>
-                <button class="btn-glass ms-2" id="resetAuctionBtn">↺ Reset</button>
-                <button class="btn-glass ms-2" id="exportBtn">⬇ Export</button>
+            <div class="header-right" id="headerRight">
+                <!-- Admin-only buttons — hidden for viewers -->
+                <div id="adminControls" style="display:none;align-items:center;gap:6px;">
+                    <button class="btn-glass" id="addPlayerModalBtn" data-bs-toggle="modal" data-bs-target="#addPlayerModal">+ Add Player</button>
+                    <button class="btn-glass" id="resetAuctionBtn">↺ Reset</button>
+                    <button class="btn-glass" id="exportBtn">⬇ Export</button>
+                    <button class="btn-glass btn-admin-logout" id="adminLogoutBtn" title="Logout">🔒 Admin</button>
+                </div>
+                <!-- Viewer sees only Export + Admin Login -->
+                <div id="viewerControls" style="display:flex;align-items:center;gap:6px;">
+                    <button class="btn-glass" id="exportBtnViewer">⬇ Export</button>
+                    <button class="btn-glass btn-admin-login" id="adminLoginBtn">🔑 Admin Login</button>
+                </div>
             </div>
         </div>
     </div>
@@ -244,7 +253,7 @@
             <!-- Unsold Players -->
             <div class="team-card unsold-card">
                 <div class="team-header unsold-header">
-                    <span class="team-name-big">🚫 UNSOLD</span>
+                    <span class="team-name-big">🚫 UNSOLD / ⏭ SKIPPED</span>
                     <span class="budget-num" id="unsoldCount">0</span>
                 </div>
                 <ul class="team-player-list" id="unsoldList">
@@ -329,8 +338,31 @@
     </div>
   </div>
 </div>
-
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="js/auction.js"></script>
+
+<!-- Admin Login Modal -->
+<div class="modal fade" id="adminLoginModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content" style="background:var(--bg-card);border:1px solid var(--border);">
+      <div class="modal-header border-0 pb-0">
+        <h6 class="modal-title" style="color:var(--accent);letter-spacing:2px;font-weight:700;">🔑 ADMIN LOGIN</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--text-muted);font-size:0.78rem;margin-bottom:12px;">Enter admin password to unlock auction controls.</p>
+        <input type="password" id="adminPasswordInput" class="form-control form-control-sm"
+               placeholder="Password..." style="background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--text);">
+        <div id="adminLoginError" style="color:#ff6b6b;font-size:0.75rem;margin-top:6px;display:none;">❌ Wrong password</div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button class="btn-glass w-100" id="adminLoginSubmit">Unlock Admin</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
