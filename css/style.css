@@ -899,7 +899,7 @@ body {
     background: var(--bg-card);
     border-left: 1px solid var(--border);
     height: 100%;
-    overflow-y: auto;
+    overflow: hidden;    /* col itself does NOT scroll — each card scrolls its own list */
     display: flex;
     flex-direction: column;
     gap: 0;
@@ -909,13 +909,20 @@ body {
 .teams-col::-webkit-scrollbar { width: 4px; }
 .teams-col::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); }
 
+/* Each card takes equal share of the column height and clips internally */
 .team-card {
     border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;   /* critical: flex child can shrink below natural content size */
+    overflow: hidden;
 }
 
 .team-header {
     padding: 12px 14px;
     position: relative;
+    flex-shrink: 0;  /* header never squishes — only the list scrolls */
 }
 
 .hunters-header { border-left: 3px solid var(--hunters); }
@@ -976,8 +983,9 @@ body {
     display: flex;
     flex-direction: column;
     gap: 3px;
-    max-height: 200px;
-    overflow-y: auto;
+    flex: 1;          /* fill remaining card height after header */
+    min-height: 0;    /* allow shrinking */
+    overflow-y: auto; /* scroll within the card */
 }
 
 .team-player-list::-webkit-scrollbar { width: 3px; }

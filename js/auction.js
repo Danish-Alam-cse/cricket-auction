@@ -126,9 +126,9 @@ $(document).ready(function () {
     /* ==============================
        STATE
     ============================== */
-    let budgetHunters = 100;
-    let budgetStrikers = 100;
-    const INITIAL_BUDGET = 100;
+    let budgetHunters = 200;
+    let budgetStrikers = 200;
+    const INITIAL_BUDGET = 200;
     const BASE_PRICE = 5;
 
     let players = [];
@@ -199,8 +199,8 @@ $(document).ready(function () {
             if (!data || !data.allPlayers) return false;
 
             const s = data.state || {};
-            budgetHunters  = s.budgetHunters  ?? 100;
-            budgetStrikers = s.budgetStrikers ?? 100;
+            budgetHunters  = s.budgetHunters  ?? 200;
+            budgetStrikers = s.budgetStrikers ?? 200;
             huntersCount   = s.huntersCount   ?? 0;
             strikersCount  = s.strikersCount  ?? 0;
             unsoldPlayers  = s.unsoldPlayers  ?? 0;
