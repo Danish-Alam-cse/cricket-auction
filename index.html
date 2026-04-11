@@ -21,7 +21,7 @@
                 <span class="live-badge">● LIVE</span>
                 <h4>Hussaini Cricket Club Delhi</h4>
             </div>
-            <h1 class="auction-title">CRICKET AUCTION <span class="year-tag">Hassan Trophy 2026</span></h1>
+            <h1 class="auction-title">CRICKET AUCTION <span class="year-tag">Hussain Trophy 2026</span></h1>
             <div class="header-right" id="headerRight">
                 <!-- Admin-only buttons — hidden for viewers -->
                 <div id="adminControls" style="display:none;align-items:center;gap:6px;">
@@ -273,15 +273,57 @@
 <!-- Fireworks -->
 <div id="fireworks"></div>
 
-<!-- Sold Overlay -->
+<!-- Sold Overlay — Instagram Story Card -->
 <div id="soldOverlay" class="sold-overlay" style="display:none">
-    <div class="sold-content">
-        <div class="sold-text">SOLD!</div>
+    <div class="sold-card" id="soldCard">
+
+        <!-- Top bar -->
+        <div class="sold-topbar">
+            <span class="sold-event-tag">Hussain Trophy 2026</span>
+            <span class="sold-club-tag">🏏 HCC Delhi</span>
+        </div>
+
+        <!-- SOLD stamp -->
+        <div class="sold-stamp-wrap">
+            <div class="sold-stamp">SOLD!</div>
+            <div class="sold-stamp-line"></div>
+        </div>
+
+        <!-- Player image -->
+        <div class="sold-img-wrap">
+            <div class="sold-img-glow" id="soldImgGlow"></div>
+            <img id="overlayPlayerImg" src="" alt="" class="sold-player-img">
+            <div class="sold-cat-pill" id="overlayCatPill"></div>
+        </div>
+
+        <!-- Player name -->
         <div class="sold-player-name" id="overlayPlayerName"></div>
-        <div class="sold-price" id="overlayPrice"></div>
-        <div class="sold-team" id="overlayTeam"></div>
+
+        <!-- Price -->
+        <div class="sold-price-wrap">
+            <span class="sold-price-label">SOLD FOR</span>
+            <span class="sold-price-val" id="overlayPrice"></span>
+        </div>
+
+        <!-- Team banner -->
+        <div class="sold-team-banner" id="overlayTeamBanner">
+            <span class="sold-team-label">PICKED BY</span>
+            <span class="sold-team-name" id="overlayTeam"></span>
+        </div>
+
+        <!-- Bottom -->
+        <div class="sold-bottombar">Hussaini Cricket Club · Delhi</div>
+    </div>
+
+    <!-- Action buttons (NOT part of downloadable card) -->
+    <div class="sold-actions">
+        <button class="sold-close-btn" id="closeSoldOverlay">✕ Close</button>
+        <button class="sold-download-btn" id="downloadSoldCard">⬇ Download Story</button>
     </div>
 </div>
+
+<!-- Off-screen canvas for story generation -->
+<canvas id="storyCanvas" width="1080" height="1920" style="display:none;"></canvas>
 
 <!-- Add Player Modal -->
 <div class="modal fade" id="addPlayerModal" tabindex="-1">

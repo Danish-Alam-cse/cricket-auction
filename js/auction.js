@@ -673,15 +673,293 @@ $(document).ready(function () {
     }
 
     /* ==============================
-       SOLD OVERLAY
+       SOLD OVERLAY  (Instagram Story Card)
     ============================== */
-    function showSoldOverlay(playerName, price, teamName) {
+    // Store last sold info for canvas render
+    let _lastSold = {};
+
+    function showSoldOverlay(playerName, price, teamName, playerImg, teamId,teamCat) {
+        _lastSold = { playerName, price, teamName, playerImg, teamId,teamCat};
+        console.log(_lastSold);
+        // Team colors
+        const isHunters  = teamId === "Hunters";
+        const teamColor  = isHunters ? "#f5a623" : "#e83e3e";
+        const teamIcon   = isHunters ? "🦅" : "⚡";
+        const catIcon    = { Sun:"☀", Moon:"🌙", Star:"⭐" };
+        const catColor   = { Sun:"#f5a623", Moon:"#7eb8f7", Star:"#c084fc" };
+        const cat        = teamCat ? teamCat : "Star";
+
+        // Populate overlay
         $("#overlayPlayerName").text(playerName);
         $("#overlayPrice").text(price + "L");
-        $("#overlayTeam").text("→ " + teamName);
-        $("#soldOverlay").show();
+        $("#overlayTeam").html(teamIcon + " " + teamName.replace(/^[^ ]+ /,""));
+        $("#overlayCatPill").text((catIcon[cat]||"") + " " + cat)
+            .css({ background: `rgba(${hexToRgb(catColor[cat]||"#aaa")},0.18)`,
+                   border: `1px solid ${catColor[cat]||"#aaa"}`, color: catColor[cat]||"#aaa" });
+        $("#overlayTeamBanner").css("--team-col", teamColor);
+        $("#soldCard").css("--team-col", teamColor);
+        $("#soldImgGlow").css("background", `radial-gradient(circle, ${teamColor}55 0%, transparent 70%)`);
+
+        // Player image
+        const imgSrc = playerImg || `https://via.placeholder.com/200x200/0d1e2e/${teamColor.replace("#","")}?text=${encodeURIComponent(playerName[0])}`;
+        const $img   = $("#overlayPlayerImg");
+        $img.attr("src", imgSrc).css("border-color", teamColor);
+
+        // Show overlay (don't auto-hide — user closes manually)
+        $("#soldOverlay").fadeIn(300);
         showFireworks();
-        setTimeout(() => { $("#soldOverlay").fadeOut(500); }, 2200);
+    }
+
+    // Close button
+    $("#closeSoldOverlay").click(function () {
+        $("#soldOverlay").fadeOut(300);
+    });
+
+    // Click backdrop to close
+    $("#soldOverlay").click(function (e) {
+        if ($(e.target).is("#soldOverlay")) $(this).fadeOut(300);
+    });
+
+    /* ── CANVAS STORY DOWNLOAD ── */
+    $("#downloadSoldCard").click(function () {
+        generateStoryCanvas(_lastSold).then(dataUrl => {
+            const a    = document.createElement("a");
+            a.href     = dataUrl;
+            a.download = `${_lastSold.playerName}_sold_story.png`;
+            a.click();
+        }).catch(err => {
+            console.error("Story gen error:", err);
+            showSoldFlash("⚠ Image cross-origin blocked — try hosting images locally.");
+        });
+    });
+
+    function generateStoryCanvas({ playerName, price, teamName, playerImg, teamId,teamCat }) {
+        return new Promise((resolve, reject) => {
+            const canvas = document.getElementById("storyCanvas");
+            const ctx    = canvas.getContext("2d");
+            const W = 1080, H = 1920;
+            ctx.clearRect(0, 0, W, H);
+
+            const isHunters = teamId === "Hunters";
+            const teamCol   = isHunters ? "#f5a623" : "#e83e3e";
+            const teamCol2  = isHunters ? "#c47a0a" : "#a01c1c";
+            const cat       = teamCat || "Star";
+            const catColor  = { Sun:"#f5a623", Moon:"#7eb8f7", Star:"#c084fc" }[cat] || "#c084fc";
+            const teamIcon  = isHunters ? "🦅" : "⚡";
+
+            // ── BG gradient ──
+            const bg = ctx.createLinearGradient(0, 0, 0, H);
+            bg.addColorStop(0,    "#050a0e");
+            bg.addColorStop(0.45, "#0a1520");
+            bg.addColorStop(1,    "#050a0e");
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, W, H);
+
+            // Grid lines texture
+            ctx.strokeStyle = "rgba(255,255,255,0.025)";
+            ctx.lineWidth   = 1;
+            for (let y = 0; y < H; y += 60) {
+                ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+            }
+
+            // Top accent line
+            const tline = ctx.createLinearGradient(0,0,W,0);
+            tline.addColorStop(0,"transparent");
+            tline.addColorStop(0.5, teamCol);
+            tline.addColorStop(1,"transparent");
+            ctx.fillStyle = tline;
+            ctx.fillRect(0, 0, W, 4);
+
+            // Team colour radial glow (bottom)
+            const glow = ctx.createRadialGradient(W/2, H, 0, W/2, H, 900);
+            glow.addColorStop(0, teamCol + "44");
+            glow.addColorStop(1, "transparent");
+            ctx.fillStyle = glow;
+            ctx.fillRect(0, 0, W, H);
+
+            // ── EVENT TAG (top) ──
+            ctx.font         = "bold 38px 'Rajdhani', sans-serif";
+            ctx.fillStyle    = "rgba(255,255,255,0.35)";
+            ctx.textAlign    = "center";
+            ctx.letterSpacing = "6px";
+            ctx.fillText("Hussain Trophy 2026  ·  HCC DELHI", W/2, 90);
+
+            // ── SOLD! stamp ──
+            ctx.font      = "bold 220px 'Bebas Neue', sans-serif";
+            ctx.fillStyle = teamCol;
+            ctx.shadowColor  = teamCol;
+            ctx.shadowBlur   = 60;
+            ctx.textAlign    = "center";
+            ctx.fillText("SOLD!", W/2, 380);
+            ctx.shadowBlur = 0;
+
+            // Divider line under SOLD
+            const div = ctx.createLinearGradient(0,0,W,0);
+            div.addColorStop(0,"transparent");
+            div.addColorStop(0.5, teamCol);
+            div.addColorStop(1,"transparent");
+            ctx.strokeStyle = div;
+            ctx.lineWidth   = 3;
+            ctx.beginPath(); ctx.moveTo(100,420); ctx.lineTo(W-100,420); ctx.stroke();
+
+            // ── PLAYER IMAGE ──
+            const imgY  = 460, imgSize = 580, imgX = (W - imgSize) / 2;
+            const imgRadius = 32;
+
+            function drawCard() {
+                // Card background
+                ctx.save();
+                roundRect(ctx, imgX - 20, imgY - 20, imgSize + 40, imgSize + 40, imgRadius + 8);
+                const cardGrad = ctx.createLinearGradient(imgX, imgY, imgX, imgY + imgSize);
+                cardGrad.addColorStop(0, "#0d1e2e");
+                cardGrad.addColorStop(1, "#050a0e");
+                ctx.fillStyle = cardGrad;
+                ctx.fill();
+
+                // Glowing border
+                ctx.shadowColor = teamCol;
+                ctx.shadowBlur  = 30;
+                ctx.strokeStyle = teamCol;
+                ctx.lineWidth   = 4;
+                roundRect(ctx, imgX - 20, imgY - 20, imgSize + 40, imgSize + 40, imgRadius + 8);
+                ctx.stroke();
+                ctx.shadowBlur  = 0;
+                ctx.restore();
+
+                // Category pill on image
+                ctx.save();
+                const catLabel = ({ Sun:"☀ SUN", Moon:"🌙 MOON", Star:"⭐ STAR" })[cat] || cat;
+                const pillW = 200, pillH = 52;
+                roundRect(ctx, W/2 - pillW/2, imgY + imgSize - pillH/2 + 20, pillW, pillH, 26);
+                ctx.fillStyle = catColor + "cc";
+                ctx.fill();
+                ctx.strokeStyle = catColor;
+                ctx.lineWidth   = 2;
+                roundRect(ctx, W/2 - pillW/2, imgY + imgSize - pillH/2 + 20, pillW, pillH, 26);
+                ctx.stroke();
+                ctx.font      = "bold 30px 'Rajdhani', sans-serif";
+                ctx.fillStyle = "#fff";
+                ctx.textAlign = "center";
+                ctx.fillText(catLabel, W/2, imgY + imgSize + 20 + 35);
+                ctx.restore();
+            }
+
+            function roundRect(c, x, y, w, h, r) {
+                c.beginPath();
+                c.moveTo(x+r, y);
+                c.lineTo(x+w-r, y);
+                c.quadraticCurveTo(x+w, y, x+w, y+r);
+                c.lineTo(x+w, y+h-r);
+                c.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+                c.lineTo(x+r, y+h);
+                c.quadraticCurveTo(x, y+h, x, y+h-r);
+                c.lineTo(x, y+r);
+                c.quadraticCurveTo(x, y, x+r, y);
+                c.closePath();
+            }
+
+            function drawRestOfCard() {
+                // ── PLAYER NAME ──
+                ctx.font         = "bold 148px 'Bebas Neue', sans-serif";
+                ctx.fillStyle    = "#e8f0f8";
+                ctx.shadowColor  = "rgba(0,0,0,0.6)";
+                ctx.shadowBlur   = 10;
+                ctx.textAlign    = "center";
+                ctx.fillText(playerName.toUpperCase(), W/2, imgY + imgSize + 160);
+                ctx.shadowBlur   = 0;
+
+                // ── PRICE ──
+                const priceY = imgY + imgSize + 280;
+                ctx.font      = "700 52px 'Rajdhani', sans-serif";
+                ctx.fillStyle = "rgba(255,255,255,0.45)";
+                ctx.textAlign = "center";
+                ctx.fillText("SOLD FOR", W/2, priceY);
+
+                ctx.font         = "bold 180px 'Bebas Neue', sans-serif";
+                ctx.fillStyle    = teamCol;
+                ctx.shadowColor  = teamCol;
+                ctx.shadowBlur   = 50;
+                ctx.textAlign    = "center";
+                ctx.fillText(price + "L", W/2, priceY + 170);
+                ctx.shadowBlur   = 0;
+
+                // ── TEAM BANNER ──
+                const bannerY  = priceY + 230;
+                const bannerH  = 140;
+                const bannerGrad = ctx.createLinearGradient(0, bannerY, W, bannerY);
+                bannerGrad.addColorStop(0, teamCol2 + "00");
+                bannerGrad.addColorStop(0.15, teamCol2);
+                bannerGrad.addColorStop(0.85, teamCol2);
+                bannerGrad.addColorStop(1, teamCol2 + "00");
+                ctx.fillStyle = bannerGrad;
+                ctx.fillRect(0, bannerY, W, bannerH);
+
+                ctx.font      = "700 44px 'Rajdhani', sans-serif";
+                ctx.fillStyle = "rgba(255,255,255,0.55)";
+                ctx.textAlign = "center";
+                ctx.fillText("PICKED BY", W/2, bannerY + 48);
+
+                ctx.font      = "bold 80px 'Bebas Neue', sans-serif";
+                ctx.fillStyle = "#fff";
+                ctx.shadowColor = "rgba(0,0,0,0.5)";
+                ctx.shadowBlur  = 8;
+                ctx.fillText(teamIcon + " " + teamName.replace(/^[^\s]+ /, ""), W/2, bannerY + 118);
+                ctx.shadowBlur  = 0;
+
+                // Bottom line
+                const bline = ctx.createLinearGradient(0,0,W,0);
+                bline.addColorStop(0,"transparent");
+                bline.addColorStop(0.5, teamCol);
+                bline.addColorStop(1,"transparent");
+                ctx.fillStyle = bline;
+                ctx.fillRect(0, H-4, W, 4);
+
+                // Bottom text
+                ctx.font      = "600 36px 'Rajdhani', sans-serif";
+                ctx.fillStyle = "rgba(255,255,255,0.25)";
+                ctx.textAlign = "center";
+                ctx.fillText("Hussaini Cricket Club  ·  Delhi", W/2, H - 50);
+
+                resolve(canvas.toDataURL("image/png"));
+            }
+
+            // Draw card frame first, then try loading image
+            drawCard();
+
+            const tryLoadImg = (src, cb) => {
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload  = () => cb(img);
+                img.onerror = () => cb(null);
+                img.src = src;
+                // Timeout fallback
+                setTimeout(() => { if (!img.complete) cb(null); }, 4000);
+            };
+
+            tryLoadImg(playerImg || "", function(img) {
+                if (img) {
+                    // Clip image to rounded rect
+                    ctx.save();
+                    roundRect(ctx, imgX, imgY, imgSize, imgSize, imgRadius);
+                    ctx.clip();
+                    ctx.drawImage(img, imgX, imgY, imgSize, imgSize);
+                    ctx.restore();
+                } else {
+                    // Fallback: gradient + initial letter
+                    ctx.save();
+                    roundRect(ctx, imgX, imgY, imgSize, imgSize, imgRadius);
+                    const fb = ctx.createLinearGradient(imgX, imgY, imgX+imgSize, imgY+imgSize);
+                    fb.addColorStop(0, "#0d1e2e"); fb.addColorStop(1, "#163352");
+                    ctx.fillStyle = fb; ctx.fill();
+                    ctx.font      = `bold ${imgSize*0.55}px 'Bebas Neue', sans-serif`;
+                    ctx.fillStyle = teamCol + "88";
+                    ctx.textAlign = "center";
+                    ctx.fillText(playerName[0].toUpperCase(), imgX + imgSize/2, imgY + imgSize*0.75);
+                    ctx.restore();
+                }
+                drawRestOfCard();
+            });
+        });
     }
 
     function showSoldFlash(msg) {
@@ -711,7 +989,8 @@ $(document).ready(function () {
 
         const teamLabel = team === "Hunters" ? "🦅 Hidayat Hunters" : "⚡ Shan Strikers";
         addLog(team === "Hunters" ? "🦅" : "⚡", currentPlayer.name, teamLabel, bid + "L");
-        showSoldOverlay(currentPlayer.name, bid, teamLabel);
+        _lastSold._cat = currentPlayer.category;   // store category for canvas
+        showSoldOverlay(currentPlayer.name, bid, teamLabel, currentPlayer.img || "", team,currentPlayer.category);
         updateTeamDisplay(); saveState(); removeCurrentPlayer();
     }
 
@@ -1043,54 +1322,41 @@ $(document).ready(function () {
         $("#spinIdleMsg").show();
         $(this).prop("disabled", true).text("⏳ Spinning…");
 
-        const winnerIdx = Math.floor(Math.random() * players.length);
-        const slice     = (2 * Math.PI) / players.length;
+        // Pick a random winner index
+        const winnerIdx   = Math.floor(Math.random() * players.length);
+        const slice       = (2 * Math.PI) / players.length;
 
-        /*
-         * FIX: Normalize spinAngle to [0, 2π) first so accumulated
-         * rotations from previous spins don't corrupt the calculation.
-         *
-         * Pointer is at the TOP of the canvas = angle -π/2 in canvas coords.
-         * Segment i occupies [rotation + i*slice,  rotation + (i+1)*slice].
-         * We want the pointer to sit at the CENTRE of winnerIdx's segment.
-         *
-         * After the spin, the wheel rotation will be `finalAngle`.
-         * Segment centre of winnerIdx = finalAngle + winnerIdx*slice + slice/2
-         * We want that to equal -π/2  (mod 2π):
-         *   finalAngle = -π/2 - winnerIdx*slice - slice/2
-         *
-         * We normalise the start, then add enough full rotations (drama) so
-         * the wheel always spins forward by at least 5 full turns.
-         */
-        const normalised  = ((spinAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-        const rawTarget   = -Math.PI / 2 - winnerIdx * slice - slice / 2;
-        // Make rawTarget land ahead of normalised (positive forward spin)
-        let   delta       = ((rawTarget - normalised) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
-        if (delta < 0.01) delta += 2 * Math.PI;           // avoid zero-spin edge case
+        // We want the pointer (at top = -π/2) to land on winnerIdx's segment centre
+        // Segment i starts at rotation + i*slice.
+        // Winner segment centre = winnerIdx * slice + slice/2
+        // We want: finalRotation + winnerIdx*slice + slice/2 ≡ -π/2  (pointer at top)
+        // So: finalRotation = -π/2 - winnerIdx*slice - slice/2
+        // Add 5 full extra rotations for drama
         const extraSpins  = (5 + Math.floor(Math.random() * 3)) * 2 * Math.PI;
-        const totalDelta  = delta + extraSpins;            // how much to rotate from normalised
+        const targetAngle = -Math.PI / 2 - winnerIdx * slice - slice / 2;
+        const fullTarget  = targetAngle + extraSpins;
 
-        const duration  = 4000 + Math.random() * 1500;
-        const startTime = performance.now();
-        const startNorm = normalised;                      // animate from normalised base
+        const duration    = 4000 + Math.random() * 1500; // 4–5.5 s
+        const startTime   = performance.now();
+        const startAngle  = spinAngle;
 
-        // Reset spinAngle to normalised so draw is consistent
-        spinAngle = normalised;
-
-        function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+        function easeOut(t) {
+            // Cubic ease-out
+            return 1 - Math.pow(1 - t, 3);
+        }
 
         function animate(now) {
             const elapsed  = now - startTime;
             const progress = Math.min(elapsed / duration, 1);
-            spinAngle      = startNorm + totalDelta * easeOut(progress);
+            spinAngle      = startAngle + fullTarget * easeOut(progress);
 
             drawWheel(players, spinAngle);
 
             if (progress < 1) {
                 requestAnimationFrame(animate);
             } else {
-                // Snap to mathematically exact final position
-                spinAngle = startNorm + totalDelta;
+                // Snap to exact target
+                spinAngle = startAngle + fullTarget;
                 drawWheel(players, spinAngle);
                 spinning = false;
 

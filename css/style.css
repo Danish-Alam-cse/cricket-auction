@@ -1071,64 +1071,258 @@ body {
     gap: 6px;
 }
 
-/* ===== SOLD OVERLAY ===== */
+/* ===== SOLD OVERLAY — Instagram Story Card ===== */
 .sold-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.85);
+    background: rgba(0,0,0,0.88);
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 16px;
     z-index: 9999;
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(16px);
     animation: overlayIn 0.3s ease;
+    padding: 20px;
 }
 
 @keyframes overlayIn {
     from { opacity: 0; }
-    to { opacity: 1; }
+    to   { opacity: 1; }
 }
 
-.sold-content {
+/* The actual card — aspect ratio 9:16 like an Instagram story */
+.sold-card {
+    position: relative;
+    width: min(340px, 90vw);
+    aspect-ratio: 9 / 16;
+    background: linear-gradient(160deg, #050a0e 0%, #0a1520 50%, #050a0e 100%);
+    border-radius: 24px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 22px 18px 18px;
+    gap: 0;
+    animation: soldCardPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border: 1px solid rgba(255,255,255,0.06);
+
+    /* Grid texture */
+    background-image:
+        linear-gradient(160deg, #050a0e 0%, #0a1520 50%, #050a0e 100%),
+        repeating-linear-gradient(0deg,transparent,transparent 29px,rgba(255,255,255,0.02) 29px,rgba(255,255,255,0.02) 30px);
+    background-blend-mode: normal;
+}
+
+@keyframes soldCardPop {
+    from { transform: scale(0.6) translateY(40px); opacity: 0; }
+    to   { transform: scale(1)   translateY(0);    opacity: 1; }
+}
+
+/* Top accent line */
+.sold-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--team-col, var(--accent)), transparent);
+}
+
+.sold-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 6px;
+    flex-shrink: 0;
+}
+
+.sold-event-tag, .sold-club-tag {
+    font-size: 0.52rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+}
+
+/* SOLD! stamp */
+.sold-stamp-wrap {
     text-align: center;
-    animation: soldPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    flex-shrink: 0;
+    margin-bottom: 4px;
 }
 
-@keyframes soldPop {
-    from { transform: scale(0.5); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-}
-
-.sold-text {
+.sold-stamp {
     font-family: var(--font-display);
-    font-size: 6rem;
-    letter-spacing: 10px;
-    color: var(--accent2);
-    text-shadow: 0 0 60px rgba(57,255,154,0.6);
+    font-size: clamp(2.6rem, 8vw, 3.6rem);
+    letter-spacing: 6px;
+    color: var(--team-col, var(--accent2));
+    text-shadow: 0 0 30px var(--team-col, var(--accent2));
     line-height: 1;
 }
 
+.sold-stamp-line {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--team-col, var(--accent)), transparent);
+    margin: 4px auto 0;
+    width: 80%;
+}
+
+/* Player image */
+.sold-img-wrap {
+    position: relative;
+    flex-shrink: 0;
+    margin: 6px 0 0;
+}
+
+.sold-img-glow {
+    position: absolute;
+    inset: -20px;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.sold-player-img {
+    width: clamp(120px, 34vw, 170px);
+    height: clamp(120px, 34vw, 170px);
+    border-radius: 16px;
+    object-fit: cover;
+    border: 3px solid var(--team-col, var(--accent));
+    box-shadow: 0 0 24px var(--team-col, var(--accent));
+    display: block;
+    background: #0d1e2e;
+}
+
+.sold-cat-pill {
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 2px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+    text-transform: uppercase;
+}
+
+/* Player name */
 .sold-player-name {
     font-family: var(--font-display);
-    font-size: 2.5rem;
-    letter-spacing: 4px;
+    font-size: clamp(1.8rem, 6vw, 2.8rem);
+    letter-spacing: 3px;
     color: var(--text);
-    margin: 10px 0 6px;
+    text-align: center;
+    margin-top: 18px;
+    line-height: 1;
+    flex-shrink: 0;
 }
 
-.sold-price {
-    font-family: var(--font-mono);
-    font-size: 1.5rem;
-    color: var(--accent2);
-    font-weight: 600;
-}
-
-.sold-team {
-    font-size: 1rem;
-    color: var(--text-muted);
+/* Price */
+.sold-price-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
     margin-top: 6px;
-    letter-spacing: 2px;
+}
+
+.sold-price-label {
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: rgba(255,255,255,0.35);
     text-transform: uppercase;
+}
+
+.sold-price-val {
+    font-family: var(--font-display);
+    font-size: clamp(2.4rem, 8vw, 3.8rem);
+    letter-spacing: 2px;
+    color: var(--team-col, var(--accent2));
+    text-shadow: 0 0 20px var(--team-col, var(--accent2));
+    line-height: 1.1;
+}
+
+/* Team banner */
+.sold-team-banner {
+    width: calc(100% + 36px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 0;
+    margin-top: 8px;
+    background: linear-gradient(90deg, transparent, rgba(0,0,0,0.5), transparent);
+    border-top: 1px solid rgba(255,255,255,0.06);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    flex-shrink: 0;
+}
+
+.sold-team-label {
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: rgba(255,255,255,0.35);
+    text-transform: uppercase;
+}
+
+.sold-team-name {
+    font-family: var(--font-display);
+    font-size: clamp(1.2rem, 4vw, 1.7rem);
+    letter-spacing: 2px;
+    color: #fff;
+}
+
+/* Bottom */
+.sold-bottombar {
+    margin-top: auto;
+    font-size: 0.52rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: rgba(255,255,255,0.2);
+    text-align: center;
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+
+/* Action buttons below card */
+.sold-actions {
+    display: flex;
+    gap: 10px;
+    animation: fadeIn 0.4s ease 0.3s both;
+}
+
+.sold-close-btn, .sold-download-btn {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 0.85rem;
+    padding: 9px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: none;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+}
+
+.sold-close-btn {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: var(--text-muted);
+}
+
+.sold-close-btn:hover { background: rgba(255,255,255,0.14); color: var(--text); }
+
+.sold-download-btn {
+    background: linear-gradient(135deg, var(--accent2), #22cc7a);
+    color: #000;
+    box-shadow: 0 4px 18px rgba(57,255,154,0.25);
+}
+
+.sold-download-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(57,255,154,0.4);
 }
 
 /* ===== FIREWORKS ===== */
