@@ -4,15 +4,17 @@
     {"name":"Iqbal","category":"Sun","img":"assets/images/iqbal.jpeg"},
     {"name":"Mukhtar","category":"Sun","img":"assets/images/mukhtar.jpeg"},
     {"name":"Raj","category":"Moon","img":"assets/images/raj.jpeg"},
-    {"name":"Rehbar","category":"Moon","img":"assets/images/rehbar.jpeg"},
+    {"name":"Rehbar","category":"Sun","img":"assets/images/rehbar.jpeg"},
+    {"name":"Amir","category":"Sun","img":"assets/images/amir.jpeg"},
     {"name":"Sahab","category":"Moon","img":"assets/images/sahab.jpeg"},
     {"name":"Zaki","category":"Moon","img":"assets/images/zaki.jpeg"},
+    {"name":"Uqba","category":"Moon","img":"assets/images/uqba.jpeg"},
     {"name":"Adeeb","category":"Moon","img":"assets/images/adeeb.jpeg"},
-    {"name":"Abdullah","category":"Star","img":"assets/images/abdullah.jpeg"},
+    {"name":"Shahid","category":"Moon","img":"assets/images/shahid.jpeg"},
     {"name":"Afridi","category":"Star","img":"assets/images/afridi.jpeg"},
     {"name":"Danish","category":"Star","img":"assets/images/danish.jpeg"},
     {"name":"Firdosh","category":"Star","img":"assets/images/firdosh.jpeg"},
     {"name":"Rajesh","category":"Star","img":"assets/images/rajesh.jpeg"},
-    {"name":"Uqba","category":"Moon","img":"assets/images/uqba.jpeg"},
-    {"name":"Zulfeqaar","category":"Star","img":"assets/images/zulfeqaar.jpeg"}
+    {"name":"Azhar Khan","category":"Star","img":"assets/images/ak.jpeg"},
+    {"name":"Amaan","category":"Star","img":"assets/images/am.jpeg"}
 ]

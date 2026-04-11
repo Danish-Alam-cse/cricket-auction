@@ -45,7 +45,12 @@
 
         <!-- LEFT: Player Pool -->
         <div class="col-lg-3 player-pool-col">
-            <div class="section-title">Player Pool</div>
+            <div class="pool-top-row">
+                <div class="section-title">Player Pool</div>
+                <button class="btn-spin-trigger" id="spinWheelBtn" title="Spin to get random player">
+                    🎡 Get Player
+                </button>
+            </div>
 
             <!-- Search -->
             <div class="search-wrapper mb-3">
@@ -359,6 +364,37 @@
       </div>
       <div class="modal-footer border-0 pt-0">
         <button class="btn-glass w-100" id="adminLoginSubmit">Unlock Admin</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Spin Wheel Modal -->
+<div class="modal fade" id="spinWheelModal" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content modal-dark spin-modal-content">
+      <div class="modal-header spin-modal-header">
+        <h5 class="modal-title">🎡 Spin the Wheel</h5>
+        <button type="button" class="btn-close btn-close-white" id="closeSpinModal"></button>
+      </div>
+      <div class="modal-body spin-modal-body">
+        <div class="wheel-wrapper">
+          <div class="wheel-pointer">▼</div>
+          <canvas id="spinCanvas" width="420" height="420"></canvas>
+        </div>
+        <div class="spin-result-area">
+          <div class="spin-result-idle" id="spinIdleMsg">
+            <p>Click <b>SPIN</b> to randomly select a player!</p>
+            <div class="spin-available-count">Available: <b id="spinAvailCount">0</b> players</div>
+          </div>
+          <div class="spin-result-card" id="spinResultCard" style="display:none">
+            <div class="spin-result-label">🎉 SELECTED!</div>
+            <div class="spin-result-name" id="spinResultName"></div>
+            <div class="spin-result-cat" id="spinResultCat"></div>
+            <button class="btn-send-to-auction" id="sendToAuctionBtn">🏏 Send to Auction Stage</button>
+          </div>
+          <button class="btn-spin" id="doSpinBtn">🎡 SPIN</button>
+        </div>
       </div>
     </div>
   </div>

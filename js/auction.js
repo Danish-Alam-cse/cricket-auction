@@ -912,6 +912,247 @@ $(document).ready(function () {
     // Apply UI state on load
     applyAdminUI();
 
+    /* ==============================
+       SPIN WHEEL
+    ============================== */
+    let spinModal = null;
+    let spinning  = false;
+    let spinAngle = 0;          // current rotation in radians
+    let spinSelected = null;    // player object picked by wheel
+
+    // Colour palette for segments
+    const WHEEL_COLORS = [
+        "#1a3a5c","#0d2d4a","#163352","#0f2840",
+        "#1e4060","#112238","#192f4a","#0c2035",
+    ];
+    const CAT_COLORS = { Sun: "#f5a623", Moon: "#7eb8f7", Star: "#c084fc" };
+
+    function openSpinWheel() {
+        if (!players.length) { showSoldFlash("⚠ No players left in pool!"); return; }
+        spinSelected = null;
+        $("#spinResultCard").hide();
+        $("#spinIdleMsg").show();
+        $("#doSpinBtn").prop("disabled", false).text("🎡 SPIN");
+        $("#spinAvailCount").text(players.length);
+
+        drawWheel(players, spinAngle);
+
+        if (!spinModal) {
+            spinModal = new bootstrap.Modal(document.getElementById("spinWheelModal"), { keyboard: false });
+        }
+        spinModal.show();
+    }
+
+    $("#spinWheelBtn").click(openSpinWheel);
+
+    $("#closeSpinModal").click(function () {
+        if (spinModal) spinModal.hide();
+    });
+
+    function drawWheel(list, rotation) {
+        const canvas = document.getElementById("spinCanvas");
+        if (!canvas) return;
+        const ctx    = canvas.getContext("2d");
+        const cx     = canvas.width  / 2;
+        const cy     = canvas.height / 2;
+        const radius = cx - 8;
+        const slice  = (2 * Math.PI) / list.length;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Outer glow ring
+        ctx.save();
+        ctx.shadowColor = "rgba(0,200,255,0.4)";
+        ctx.shadowBlur  = 18;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius + 4, 0, 2 * Math.PI);
+        ctx.strokeStyle = "rgba(0,200,255,0.25)";
+        ctx.lineWidth   = 3;
+        ctx.stroke();
+        ctx.restore();
+
+        list.forEach((player, i) => {
+            const startAngle = rotation + i * slice;
+            const endAngle   = startAngle + slice;
+
+            // Segment fill
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.arc(cx, cy, radius, startAngle, endAngle);
+            ctx.closePath();
+            ctx.fillStyle = WHEEL_COLORS[i % WHEEL_COLORS.length];
+            ctx.fill();
+
+            // Category accent arc on outer edge
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, startAngle, endAngle);
+            ctx.strokeStyle = CAT_COLORS[player.category] || "#fff";
+            ctx.lineWidth   = 4;
+            ctx.stroke();
+
+            // Divider lines
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + radius * Math.cos(startAngle), cy + radius * Math.sin(startAngle));
+            ctx.strokeStyle = "rgba(0,200,255,0.15)";
+            ctx.lineWidth   = 1;
+            ctx.stroke();
+
+            // Player name text
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(startAngle + slice / 2);
+            ctx.textAlign    = "right";
+            ctx.fillStyle    = "#e8f0f8";
+            ctx.font         = `bold ${list.length > 12 ? 11 : 13}px Rajdhani, sans-serif`;
+            ctx.shadowColor  = "rgba(0,0,0,0.8)";
+            ctx.shadowBlur   = 4;
+            ctx.fillText(player.name, radius - 10, 5);
+            ctx.restore();
+        });
+
+        // Centre circle
+        ctx.beginPath();
+        ctx.arc(cx, cy, 28, 0, 2 * Math.PI);
+        const grad = ctx.createRadialGradient(cx, cy, 4, cx, cy, 28);
+        grad.addColorStop(0, "#1a3a5c");
+        grad.addColorStop(1, "#050a0e");
+        ctx.fillStyle = grad;
+        ctx.fill();
+        ctx.strokeStyle = "rgba(0,200,255,0.5)";
+        ctx.lineWidth   = 2;
+        ctx.stroke();
+
+        // Centre cricket ball icon
+        ctx.font      = "18px serif";
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#fff";
+        ctx.fillText("🏏", cx, cy + 7);
+    }
+
+    $("#doSpinBtn").click(function () {
+        if (spinning || !players.length) return;
+        if (currentPlayer) {
+            showSoldFlash("⚠ Pehle current player ka decision lo!");
+            return;
+        }
+
+        spinning = true;
+        spinSelected = null;
+        $("#spinResultCard").hide();
+        $("#spinIdleMsg").show();
+        $(this).prop("disabled", true).text("⏳ Spinning…");
+
+        const winnerIdx = Math.floor(Math.random() * players.length);
+        const slice     = (2 * Math.PI) / players.length;
+
+        /*
+         * FIX: Normalize spinAngle to [0, 2π) first so accumulated
+         * rotations from previous spins don't corrupt the calculation.
+         *
+         * Pointer is at the TOP of the canvas = angle -π/2 in canvas coords.
+         * Segment i occupies [rotation + i*slice,  rotation + (i+1)*slice].
+         * We want the pointer to sit at the CENTRE of winnerIdx's segment.
+         *
+         * After the spin, the wheel rotation will be `finalAngle`.
+         * Segment centre of winnerIdx = finalAngle + winnerIdx*slice + slice/2
+         * We want that to equal -π/2  (mod 2π):
+         *   finalAngle = -π/2 - winnerIdx*slice - slice/2
+         *
+         * We normalise the start, then add enough full rotations (drama) so
+         * the wheel always spins forward by at least 5 full turns.
+         */
+        const normalised  = ((spinAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+        const rawTarget   = -Math.PI / 2 - winnerIdx * slice - slice / 2;
+        // Make rawTarget land ahead of normalised (positive forward spin)
+        let   delta       = ((rawTarget - normalised) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+        if (delta < 0.01) delta += 2 * Math.PI;           // avoid zero-spin edge case
+        const extraSpins  = (5 + Math.floor(Math.random() * 3)) * 2 * Math.PI;
+        const totalDelta  = delta + extraSpins;            // how much to rotate from normalised
+
+        const duration  = 4000 + Math.random() * 1500;
+        const startTime = performance.now();
+        const startNorm = normalised;                      // animate from normalised base
+
+        // Reset spinAngle to normalised so draw is consistent
+        spinAngle = normalised;
+
+        function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+
+        function animate(now) {
+            const elapsed  = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            spinAngle      = startNorm + totalDelta * easeOut(progress);
+
+            drawWheel(players, spinAngle);
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                // Snap to mathematically exact final position
+                spinAngle = startNorm + totalDelta;
+                drawWheel(players, spinAngle);
+                spinning = false;
+
+                spinSelected = players[winnerIdx];
+                showSpinResult(spinSelected);
+                $("#doSpinBtn").prop("disabled", false).text("🔄 Spin Again");
+            }
+        }
+
+        requestAnimationFrame(animate);
+    });
+
+    function showSpinResult(player) {
+        const catIcons = { Sun: "☀", Moon: "🌙", Star: "⭐" };
+        const catColors = { Sun: "#f5a623", Moon: "#7eb8f7", Star: "#c084fc" };
+
+        $("#spinResultName").text(player.name);
+        $("#spinResultCat")
+            .text(catIcons[player.category] + " " + player.category)
+            .css("color", catColors[player.category] || "#aaa");
+        $("#spinIdleMsg").hide();
+        $("#spinResultCard").show();
+
+        // Flash the pointer
+        $(".wheel-pointer").addClass("pointer-flash");
+        setTimeout(() => $(".wheel-pointer").removeClass("pointer-flash"), 1000);
+    }
+
+    $("#sendToAuctionBtn").click(function () {
+        if (!spinSelected) return;
+        if (!isAdmin()) { showSoldFlash("⚠ Admin access required!"); return; }
+
+        // Find and activate the player in the list
+        const $li = $(`#sunList li[data-name="${spinSelected.name}"], #moonList li[data-name="${spinSelected.name}"], #starList li[data-name="${spinSelected.name}"]`).first();
+
+        if (!$li.length) {
+            showSoldFlash("⚠ Player not found in pool (already sold?)");
+            if (spinModal) spinModal.hide();
+            return;
+        }
+
+        // Close modal first
+        if (spinModal) spinModal.hide();
+
+        // Simulate click on that player li (triggers full selection flow)
+        $(".player-list li").removeClass("active-player");
+        $li.addClass("active-player");
+
+        currentPlayer = {
+            name:     spinSelected.name,
+            category: spinSelected.category,
+            img:      spinSelected.img || "",
+            element:  $li
+        };
+        showPlayerCard(currentPlayer);
+        resetTimer();
+        resetBidTracker();
+
+        spinSelected = null;
+        showSoldFlash("🎡 " + currentPlayer.name + " spin se select hua!");
+    });
+
     /* INIT */
     updateTeamDisplay();
 });

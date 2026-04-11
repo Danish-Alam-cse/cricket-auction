@@ -1246,3 +1246,220 @@ body {
     color: var(--text) !important;
 }
 #adminLoginModal .form-control::placeholder { color: var(--text-muted); }
+/* ===== SPIN WHEEL ===== */
+.pool-top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.pool-top-row .section-title { margin-bottom: 0; }
+
+.btn-spin-trigger {
+    background: linear-gradient(135deg, rgba(0,200,255,0.15), rgba(57,255,154,0.1));
+    border: 1px solid rgba(0,200,255,0.35);
+    color: var(--accent);
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 0.8rem;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.btn-spin-trigger:hover {
+    background: linear-gradient(135deg, rgba(0,200,255,0.25), rgba(57,255,154,0.18));
+    border-color: var(--accent);
+    box-shadow: 0 0 14px rgba(0,200,255,0.25);
+    transform: translateY(-1px);
+}
+
+/* Modal */
+.spin-modal-content {
+    background: var(--bg-card);
+    border: 1px solid rgba(0,200,255,0.2);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.spin-modal-header {
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+}
+
+.spin-modal-header .modal-title {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    letter-spacing: 3px;
+    color: var(--accent);
+}
+
+.spin-modal-body {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    padding: 24px;
+    background: radial-gradient(ellipse at top, rgba(0,200,255,0.04) 0%, transparent 70%);
+}
+
+/* Wheel */
+.wheel-wrapper {
+    position: relative;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#spinCanvas {
+    border-radius: 50%;
+    box-shadow: 0 0 40px rgba(0,200,255,0.15), 0 0 0 2px rgba(0,200,255,0.1);
+    display: block;
+}
+
+.wheel-pointer {
+    position: absolute;
+    top: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 2rem;
+    color: var(--accent);
+    text-shadow: 0 0 12px rgba(0,200,255,0.7);
+    z-index: 10;
+    line-height: 1;
+    transition: transform 0.1s;
+}
+
+.wheel-pointer.pointer-flash {
+    animation: pointerBounce 0.4s ease 3;
+}
+
+@keyframes pointerBounce {
+    0%,100% { transform: translateX(-50%) scale(1);   color: var(--accent); }
+    50%      { transform: translateX(-50%) scale(1.4); color: var(--accent2); text-shadow: 0 0 20px rgba(57,255,154,0.8); }
+}
+
+/* Result area */
+.spin-result-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    min-width: 0;
+}
+
+.spin-result-idle {
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.spin-result-idle p { font-size: 0.95rem; margin-bottom: 8px; }
+.spin-result-idle b { color: var(--text); }
+
+.spin-available-count {
+    display: inline-block;
+    background: rgba(0,200,255,0.08);
+    border: 1px solid rgba(0,200,255,0.2);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 0.8rem;
+    color: var(--accent);
+}
+
+.spin-result-card {
+    background: linear-gradient(135deg, rgba(13,30,46,0.9), rgba(10,21,32,0.9));
+    border: 1px solid rgba(57,255,154,0.3);
+    border-radius: var(--radius-lg);
+    padding: 20px 24px;
+    text-align: center;
+    width: 100%;
+    animation: resultPop 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    box-shadow: 0 0 30px rgba(57,255,154,0.08);
+}
+
+@keyframes resultPop {
+    from { transform: scale(0.7); opacity: 0; }
+    to   { transform: scale(1);   opacity: 1; }
+}
+
+.spin-result-label {
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 3px;
+    color: var(--accent2);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.spin-result-name {
+    font-family: var(--font-display);
+    font-size: 2.4rem;
+    letter-spacing: 3px;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 6px;
+    text-shadow: 0 0 20px rgba(57,255,154,0.2);
+}
+
+.spin-result-cat {
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+}
+
+.btn-send-to-auction {
+    background: linear-gradient(135deg, var(--accent2), #22cc7a);
+    border: none;
+    color: #000;
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 0.95rem;
+    padding: 10px 22px;
+    border-radius: 8px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+    width: 100%;
+}
+
+.btn-send-to-auction:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 22px rgba(57,255,154,0.35);
+}
+
+.btn-spin {
+    background: linear-gradient(135deg, #0077aa, var(--accent));
+    border: none;
+    color: #000;
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    letter-spacing: 3px;
+    padding: 12px 36px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 20px rgba(0,200,255,0.25);
+    width: 100%;
+}
+
+.btn-spin:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(0,200,255,0.4);
+}
+
+.btn-spin:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    .spin-modal-body { flex-direction: column; }
+    #spinCanvas { width: 280px; height: 280px; }
+}
