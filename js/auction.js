@@ -1199,6 +1199,10 @@ $(document).ready(function () {
     let spinAngle = 0;          // current rotation in radians
     let spinSelected = null;    // player object picked by wheel
 
+    // Category pair tracking: har category 2 baar consecutively aati hai
+    let spinLastCategory = null;   // pichli baar jo category aayi thi
+    let spinCategoryUsed = false;  // kya us category ka dusra spin ho chuka hai
+
     // Colour palette for segments
     const WHEEL_COLORS = [
         "#1a3a5c","#0d2d4a","#163352","#0f2840",
@@ -1317,46 +1321,90 @@ $(document).ready(function () {
         }
 
         spinning = true;
+
+        // Agar pichla spin send nahi hua (Spin Again bina Send ke),
+        // toh category state undo karo — warna wahi player baar baar aayega
+        if (spinSelected) {
+            if (spinCategoryUsed) {
+                // Dusra spin tha jo send nahi hua — pair incomplete karo wapas
+                spinLastCategory = spinSelected.category;
+                spinCategoryUsed = false;
+            } else if (spinLastCategory === null) {
+                // Pehla spin tha jo send nahi hua — category clear karo
+                spinLastCategory = null;
+            }
+        }
+
         spinSelected = null;
         $("#spinResultCard").hide();
         $("#spinIdleMsg").show();
         $(this).prop("disabled", true).text("⏳ Spinning…");
 
-        // Pick a random winner index
-        const winnerIdx   = Math.floor(Math.random() * players.length);
-        const slice       = (2 * Math.PI) / players.length;
-
-        // We want the pointer (at top = -π/2) to land on winnerIdx's segment centre
-        // Segment i starts at rotation + i*slice.
-        // Winner segment centre = winnerIdx * slice + slice/2
-        // We want: finalRotation + winnerIdx*slice + slice/2 ≡ -π/2  (pointer at top)
-        // So: finalRotation = -π/2 - winnerIdx*slice - slice/2
-        // Add 5 full extra rotations for drama
-        const extraSpins  = (5 + Math.floor(Math.random() * 3)) * 2 * Math.PI;
-        const targetAngle = -Math.PI / 2 - winnerIdx * slice - slice / 2;
-        const fullTarget  = targetAngle + extraSpins;
-
-        const duration    = 4000 + Math.random() * 1500; // 4–5.5 s
-        const startTime   = performance.now();
-        const startAngle  = spinAngle;
-
-        function easeOut(t) {
-            // Cubic ease-out
-            return 1 - Math.pow(1 - t, 3);
+        // ── CATEGORY-PAIR LOGIC ──────────────────────────────────
+        // Pehli baar random category, dusri baar usi category se,
+        // phir fresh random category, phir usi se — aur aise hi chalta rahe
+        let targetPlayers;
+        if (spinLastCategory && !spinCategoryUsed) {
+            // Dusra spin: usi category ke players mein se chunna hai
+            const sameCatPlayers = players.filter(p => p.category === spinLastCategory);
+            targetPlayers = sameCatPlayers.length > 0 ? sameCatPlayers : players;
+            spinCategoryUsed = true;   // pair complete — agli baar fresh random
+        } else {
+            // Pehla spin ya naya cycle: puri list mein se random
+            targetPlayers = players;
         }
+
+        // targetPlayers mein se ek random player chunte hain
+        const targetWinnerIdx = Math.floor(Math.random() * targetPlayers.length);
+        const targetPlayer    = targetPlayers[targetWinnerIdx];
+
+        // Actual index players[] mein dhundhte hain (wheel ke liye)
+        const winnerIdx = players.findIndex(p => p.name === targetPlayer.name);
+
+        // Category state update — sirf pehle spin (ya fresh cycle) pe set karo
+        if (!spinCategoryUsed) {
+            // Yeh pehla spin tha, category save karo dusre spin ke liye
+            spinLastCategory = targetPlayer.category;
+        } else {
+            // Dusra spin complete hua — cycle reset karo
+            spinLastCategory = null;
+            spinCategoryUsed = false;
+        }
+
+        const slice = (2 * Math.PI) / players.length;
+
+        // ── SPIN ANGLE FIX ───────────────────────────────────────
+        // spinAngle ko 0–2PI range mein normalise karo taaki
+        // totalDelta kabhi giant number na bane (slow spin bug fix)
+        spinAngle = spinAngle % (2 * Math.PI);
+
+        // Pointer fixed at top = -PI/2.
+        // finalAngle + winnerIdx*slice + slice/2 = -PI/2  =>  finalAngle = -PI/2 - winnerIdx*slice - slice/2
+        const pointerTarget = -Math.PI / 2 - winnerIdx * slice - slice / 2;
+        // Normalise pointerTarget to 0–2PI
+        const normTarget = ((pointerTarget % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+        // Add 5–7 full forward spins for drama
+        const extraSpins = (5 + Math.floor(Math.random() * 3)) * 2 * Math.PI;
+        const finalAngle = normTarget + extraSpins;
+
+        const duration   = 4000 + Math.random() * 1500;
+        const startTime  = performance.now();
+        const startAngle = spinAngle;
+        const totalDelta = finalAngle - startAngle + (2 * Math.PI); // guaranteed good delta
+
+        function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
 
         function animate(now) {
             const elapsed  = now - startTime;
             const progress = Math.min(elapsed / duration, 1);
-            spinAngle      = startAngle + fullTarget * easeOut(progress);
+            spinAngle      = startAngle + totalDelta * easeOut(progress);
 
             drawWheel(players, spinAngle);
 
             if (progress < 1) {
                 requestAnimationFrame(animate);
             } else {
-                // Snap to exact target
-                spinAngle = startAngle + fullTarget;
+                spinAngle = startAngle + totalDelta; // exact final position
                 drawWheel(players, spinAngle);
                 spinning = false;
 
@@ -1370,13 +1418,25 @@ $(document).ready(function () {
     });
 
     function showSpinResult(player) {
-        const catIcons = { Sun: "☀", Moon: "🌙", Star: "⭐" };
+        const catIcons  = { Sun: "☀", Moon: "🌙", Star: "⭐" };
         const catColors = { Sun: "#f5a623", Moon: "#7eb8f7", Star: "#c084fc" };
 
         $("#spinResultName").text(player.name);
         $("#spinResultCat")
             .text(catIcons[player.category] + " " + player.category)
             .css("color", catColors[player.category] || "#aaa");
+
+        // Next spin hint
+        const nextHintEl = $("#spinNextHint");
+        if (nextHintEl.length) {
+            if (!spinCategoryUsed) {
+                nextHintEl.text("🔁 Next spin: " + catIcons[player.category] + " " + player.category + " category se")
+                          .css("color", catColors[player.category] || "#aaa").show();
+            } else {
+                nextHintEl.text("🎲 Next spin: Naye random category se").css("color", "#aaa").show();
+            }
+        }
+
         $("#spinIdleMsg").hide();
         $("#spinResultCard").show();
 
