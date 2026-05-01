@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CricScore - Live Scorecard</title>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-primary: #0d0f14;
+    --bg-secondary: #161923;
+    --bg-card: #1c2130;
+    --bg-elevated: #242a3a;
+    --accent-green: #00d68f;
+    --accent-green-dim: #00d68f22;
+    --accent-orange: #ff8c00;
+    --accent-orange-dim: #ff8c0022;
+    --accent-red: #ff3d5a;
+    --accent-blue: #4d9fff;
+    --text-primary: #f0f4ff;
+    --text-secondary: #8892a4;
+    --text-muted: #555d6e;
+    --border: #252d3e;
+    --border-bright: #2e3a52;
+    --live-pulse: #ff3d5a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Exo 2', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── TOP NAV ── */
+  .nav {
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 52px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav-logo {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent-green);
+    letter-spacing: 1px;
+  }
+  .nav-logo span { color: var(--text-primary); }
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--accent-red);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+  .live-dot {
+    width: 6px; height: 6px;
+    background: #fff;
+    border-radius: 50%;
+    animation: pulse 1s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  /* ── MATCH HEADER ── */
+  .match-header {
+    background: linear-gradient(160deg, #1a2236 0%, #0d0f14 60%);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 16px 16px;
+  }
+  .tournament-tag {
+    font-size: 11px;
+    color: var(--accent-orange);
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tournament-tag::before {
+    content: '';
+    width: 16px; height: 2px;
+    background: var(--accent-orange);
+    border-radius: 2px;
+  }
+
+  .teams-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .team-block { display: flex; flex-direction: column; }
+  .team-block.right { text-align: right; align-items: flex-end; }
+
+  .team-name {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: 0.5px;
+  }
+  .team-city { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+
+  .score-center { text-align: center; }
+  .vs-text {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 600;
+    letter-spacing: 2px;
+  }
+  .main-score {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 38px;
+    font-weight: 700;
+    color: var(--accent-green);
+    line-height: 1;
+    margin: 4px 0;
+  }
+  .main-score .wickets { color: var(--text-secondary); font-size: 28px; }
+  .overs-text { font-size: 12px; color: var(--text-secondary); }
+
+  .match-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .meta-pill {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+  .meta-pill.highlight { border-color: var(--accent-green); color: var(--accent-green); }
+
+  /* ── CRR / RRR STRIP ── */
+  .rate-strip {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+  }
+  .rate-item {
+    padding: 10px 12px;
+    text-align: center;
+    border-right: 1px solid var(--border);
+  }
+  .rate-item:last-child { border-right: none; }
+  .rate-label { font-size: 10px; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 3px; }
+  .rate-value { font-family: 'Rajdhani', sans-serif; font-size: 20px; font-weight: 700; }
+  .rate-value.green { color: var(--accent-green); }
+  .rate-value.orange { color: var(--accent-orange); }
+  .rate-value.blue { color: var(--accent-blue); }
+
+  /* ── LAST BALLS ── */
+  .last-balls-wrap {
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .balls-label { font-size: 11px; color: var(--text-muted); min-width: 60px; }
+  .balls-row { display: flex; gap: 6px; }
+  .ball {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    border: 1.5px solid transparent;
+  }
+  .ball.dot { background: var(--bg-elevated); color: var(--text-muted); border-color: var(--border); }
+  .ball.one, .ball.two, .ball.three { background: var(--bg-elevated); color: var(--text-primary); border-color: var(--border-bright); }
+  .ball.four { background: #1a4a8a22; color: var(--accent-blue); border-color: var(--accent-blue); }
+  .ball.six { background: var(--accent-green-dim); color: var(--accent-green); border-color: var(--accent-green); }
+  .ball.wicket { background: #ff3d5a22; color: var(--accent-red); border-color: var(--accent-red); }
+  .ball.wide, .ball.nb { background: #ff8c0022; color: var(--accent-orange); border-color: var(--accent-orange); font-size: 10px; }
+
+  /* ── SECTIONS ── */
+  .section {
+    margin: 12px;
+    background: var(--bg-card);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border);
+  }
+  .section-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+  .section-title .accent { color: var(--accent-green); }
+
+  /* ── BATTING TABLE ── */
+  .bat-table { width: 100%; border-collapse: collapse; }
+  .bat-table th {
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 600;
+    padding: 8px 12px;
+    text-align: right;
+    background: var(--bg-elevated);
+  }
+  .bat-table th:first-child { text-align: left; }
+  .bat-table td {
+    padding: 11px 12px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+    text-align: right;
+    color: var(--text-secondary);
+  }
+  .bat-table td:first-child { text-align: left; }
+  .bat-table tr:last-child td { border-bottom: none; }
+  .bat-table tr.batting td { background: rgba(0,214,143,0.04); }
+
+  .batsman-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 14px;
+  }
+  .batsman-status { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+  .on-strike {
+    display: inline-block;
+    width: 7px; height: 7px;
+    background: var(--accent-green);
+    border-radius: 50%;
+    margin-right: 5px;
+    vertical-align: middle;
+    animation: pulse 1.2s infinite;
+  }
+  .big-run { font-family: 'Rajdhani', sans-serif; font-size: 18px; font-weight: 700; color: var(--text-primary); }
+  .sr-good { color: var(--accent-green); }
+  .sr-ok { color: var(--accent-orange); }
+
+  /* ── BOWLING TABLE ── */
+  .bowl-table { width: 100%; border-collapse: collapse; }
+  .bowl-table th {
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 600;
+    padding: 8px 12px;
+    text-align: right;
+    background: var(--bg-elevated);
+  }
+  .bowl-table th:first-child { text-align: left; }
+  .bowl-table td {
+    padding: 10px 12px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+    text-align: right;
+    color: var(--text-secondary);
+  }
+  .bowl-table td:first-child { text-align: left; }
+  .bowl-table tr:last-child td { border-bottom: none; }
+  .bowl-table tr.bowling-now td { background: rgba(77,159,255,0.05); }
+  .bowler-name { font-weight: 600; color: var(--text-primary); font-size: 14px; }
+  .bowling-dot { width: 7px; height: 7px; background: var(--accent-blue); border-radius: 50%; display: inline-block; margin-right: 5px; vertical-align: middle; animation: pulse 1.2s infinite; }
+
+  /* ── PARTNERSHIP ── */
+  .partnership-bar {
+    margin: 12px 16px;
+    padding: 12px;
+    background: var(--bg-elevated);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .pship-label { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; letter-spacing: 0.5px; }
+  .pship-info { display: flex; justify-content: space-between; margin-bottom: 8px; }
+  .pship-score { font-family: 'Rajdhani', sans-serif; font-size: 18px; font-weight: 700; color: var(--accent-green); }
+  .pship-balls { font-size: 12px; color: var(--text-secondary); align-self: flex-end; }
+  .pship-track { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .pship-fill { height: 100%; background: linear-gradient(90deg, var(--accent-green), var(--accent-blue)); border-radius: 2px; transition: width 0.6s ease; }
+
+  /* ── SCORING CONTROLS ── */
+  .scoring-panel {
+    margin: 12px;
+    background: var(--bg-card);
+    border-radius: 12px;
+    border: 1px solid var(--border-bright);
+    overflow: hidden;
+  }
+  .scoring-header {
+    background: var(--accent-green);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .scoring-header h3 {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: #0d0f14;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .scoring-body { padding: 16px; }
+
+  .run-buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .run-btn {
+    background: var(--bg-elevated);
+    border: 1.5px solid var(--border-bright);
+    color: var(--text-primary);
+    padding: 14px 8px;
+    border-radius: 10px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .run-btn:hover { transform: scale(1.04); }
+  .run-btn:active { transform: scale(0.97); }
+  .run-btn.zero { color: var(--text-muted); }
+  .run-btn.one { color: var(--text-primary); }
+  .run-btn.two, .run-btn.three { color: var(--accent-orange); border-color: var(--accent-orange); }
+  .run-btn.four { color: var(--accent-blue); border-color: var(--accent-blue); background: rgba(77,159,255,0.08); }
+  .run-btn.six { color: var(--accent-green); border-color: var(--accent-green); background: var(--accent-green-dim); }
+
+  .extras-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .extra-btn {
+    background: var(--bg-elevated);
+    border: 1.5px solid var(--border);
+    color: var(--text-secondary);
+    padding: 10px 8px;
+    border-radius: 8px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.5px;
+  }
+  .extra-btn:hover { border-color: var(--accent-orange); color: var(--accent-orange); background: var(--accent-orange-dim); }
+  .extra-btn:active { transform: scale(0.97); }
+
+  .wicket-btn {
+    width: 100%;
+    background: rgba(255,61,90,0.1);
+    border: 1.5px solid var(--accent-red);
+    color: var(--accent-red);
+    padding: 12px;
+    border-radius: 10px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.15s;
+  }
+  .wicket-btn:hover { background: rgba(255,61,90,0.2); }
+  .wicket-btn:active { transform: scale(0.98); }
+
+  /* ── FIREBASE CONFIG MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+    padding: 16px;
+  }
+  .modal {
+    background: var(--bg-card);
+    border: 1px solid var(--border-bright);
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 420px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal h2 {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent-green);
+    margin-bottom: 4px;
+  }
+  .modal p { font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; }
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 11px; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 5px; display: block; }
+  .form-input {
+    width: 100%;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-bright);
+    color: var(--text-primary);
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: 'Exo 2', sans-serif;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-input:focus { border-color: var(--accent-green); }
+  .modal-btn {
+    width: 100%;
+    background: var(--accent-green);
+    color: #0d0f14;
+    border: none;
+    padding: 13px;
+    border-radius: 10px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    margin-top: 4px;
+    transition: opacity 0.2s;
+  }
+  .modal-btn:hover { opacity: 0.9; }
+  .demo-btn {
+    width: 100%;
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    padding: 11px;
+    border-radius: 10px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+  }
+  .demo-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
+
+  /* ── NOTIFICATION ── */
+  .notif {
+    position: fixed;
+    top: 64px; left: 50%; transform: translateX(-50%);
+    background: var(--bg-elevated);
+    border: 1px solid var(--accent-green);
+    color: var(--accent-green);
+    padding: 10px 20px;
+    border-radius: 30px;
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 500;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .notif.show { opacity: 1; }
+  .notif.red { border-color: var(--accent-red); color: var(--accent-red); }
+  .notif.blue { border-color: var(--accent-blue); color: var(--accent-blue); }
+
+  /* ── FIREBASE STATUS ── */
+  .fb-status {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .fb-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); }
+  .fb-dot.connected { background: var(--accent-green); }
+
+  /* ── TOGGLE ── */
+  .toggle-scoring {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border);
+  }
+  .toggle-label { font-size: 13px; color: var(--text-secondary); }
+  .toggle-switch {
+    width: 44px; height: 24px;
+    background: var(--border);
+    border-radius: 12px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle-switch.on { background: var(--accent-green); }
+  .toggle-switch::after {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 18px; height: 18px;
+    background: #fff;
+    border-radius: 50%;
+    transition: left 0.2s;
+  }
+  .toggle-switch.on::after { left: 23px; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- FIREBASE CONFIG MODAL -->
+<div class="modal-overlay" id="configModal">
+  <div class="modal">
+    <h2>🔥 Firebase Setup</h2>
+    <p>Apna Firebase project config enter karo, ya demo mode mein chalao</p>
+
+    <div class="form-group">
+      <label class="form-label">API KEY</label>
+      <input class="form-input" id="fb-apiKey" placeholder="AIzaSy...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">AUTH DOMAIN</label>
+      <input class="form-input" id="fb-authDomain" placeholder="myapp.firebaseapp.com">
+    </div>
+    <div class="form-group">
+      <label class="form-label">PROJECT ID</label>
+      <input class="form-input" id="fb-projectId" placeholder="my-cricket-app">
+    </div>
+    <div class="form-group">
+      <label class="form-label">DATABASE URL (Realtime DB)</label>
+      <input class="form-input" id="fb-databaseURL" placeholder="https://myapp-default-rtdb.firebaseio.com">
+    </div>
+    <div class="form-group">
+      <label class="form-label">STORAGE BUCKET</label>
+      <input class="form-input" id="fb-storageBucket" placeholder="myapp.appspot.com">
+    </div>
+    <div class="form-group">
+      <label class="form-label">MESSAGING SENDER ID</label>
+      <input class="form-input" id="fb-messagingSenderId" placeholder="123456789">
+    </div>
+    <div class="form-group">
+      <label class="form-label">APP ID</label>
+      <input class="form-input" id="fb-appId" placeholder="1:123:web:abc...">
+    </div>
+
+    <button class="modal-btn" id="connectBtn">🔌 Firebase Connect Karo</button>
+    <button class="demo-btn" id="demoBtn">👀 Demo Mode (Firebase ke bina)</button>
+  </div>
+</div>
+
+<!-- NOTIFICATION -->
+<div class="notif" id="notif"></div>
+
+<!-- TOP NAV -->
+<nav class="nav">
+  <div class="nav-logo">Cric<span>Score</span></div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="fb-status" id="fbStatus">
+      <div class="fb-dot" id="fbDot"></div>
+      <span id="fbStatusText">Disconnected</span>
+    </div>
+    <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+  </div>
+</nav>
+
+<!-- MATCH HEADER -->
+<div class="match-header">
+  <div class="tournament-tag">Mumbai Premier League • T20 • Match 14</div>
+  <div class="teams-row">
+    <div class="team-block">
+      <div class="team-name" id="team1Name">Wankhede XI</div>
+      <div class="team-city">Mumbai</div>
+    </div>
+    <div class="score-center">
+      <div class="vs-text">VS</div>
+      <div class="main-score"><span id="totalRuns">0</span><span class="wickets">/<span id="totalWickets">0</span></span></div>
+      <div class="overs-text">(<span id="totalOvers">0</span>.<span id="totalBalls">0</span> ov)</div>
+    </div>
+    <div class="team-block right">
+      <div class="team-name" id="team2Name">Dharavi Kings</div>
+      <div class="team-city">Mumbai</div>
+    </div>
+  </div>
+  <div class="match-meta">
+    <div class="meta-pill highlight" id="targetPill" style="display:none">Target: <strong id="targetVal">0</strong></div>
+    <div class="meta-pill">T20 • 20 Overs</div>
+    <div class="meta-pill" id="inningsPill">1st Innings</div>
+  </div>
+</div>
+
+<!-- RATE STRIP -->
+<div class="rate-strip">
+  <div class="rate-item">
+    <div class="rate-label">CRR</div>
+    <div class="rate-value green" id="crr">0.00</div>
+  </div>
+  <div class="rate-item">
+    <div class="rate-label">Last 5 Ov</div>
+    <div class="rate-value orange" id="last5">0.00</div>
+  </div>
+  <div class="rate-item">
+    <div class="rate-label">Projected</div>
+    <div class="rate-value blue" id="projected">0</div>
+  </div>
+</div>
+
+<!-- LAST BALLS -->
+<div class="last-balls-wrap">
+  <div class="balls-label">This Over</div>
+  <div class="balls-row" id="ballsRow">
+    <div class="ball dot">•</div>
+  </div>
+</div>
+
+<!-- BATTING SECTION -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-title"><span class="accent">BATTING</span></div>
+    <div style="font-size:11px;color:var(--text-muted);">R  B  4s  6s  SR</div>
+  </div>
+  <table class="bat-table">
+    <tbody id="battersBody">
+      <tr class="batting">
+        <td>
+          <div class="batsman-name"><span class="on-strike"></span><span id="b1name">Rohit S</span></div>
+          <div class="batsman-status">Strike</div>
+        </td>
+        <td class="big-run"><span id="b1runs">0</span></td>
+        <td><span id="b1balls">0</span></td>
+        <td><span id="b1fours">0</span></td>
+        <td><span id="b1sixes">0</span></td>
+        <td class="sr-good"><span id="b1sr">0.0</span></td>
+      </tr>
+      <tr>
+        <td>
+          <div class="batsman-name"><span id="b2name">Shreyas I</span></div>
+          <div class="batsman-status">Non-strike</div>
+        </td>
+        <td class="big-run"><span id="b2runs">0</span></td>
+        <td><span id="b2balls">0</span></td>
+        <td><span id="b2fours">0</span></td>
+        <td><span id="b2sixes">0</span></td>
+        <td class="sr-ok"><span id="b2sr">0.0</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="partnership-bar">
+    <div class="pship-label">Partnership</div>
+    <div class="pship-info">
+      <div class="pship-score"><span id="pshipRuns">0</span> runs</div>
+      <div class="pship-balls"><span id="pshipBalls">0</span> balls</div>
+    </div>
+    <div class="pship-track"><div class="pship-fill" id="pshipFill" style="width:0%"></div></div>
+  </div>
+</div>
+
+<!-- BOWLING SECTION -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-title"><span class="accent">BOWLING</span></div>
+    <div style="font-size:11px;color:var(--text-muted);">O  M  R  W  ECO</div>
+  </div>
+  <table class="bowl-table">
+    <tbody id="bowlersBody">
+      <tr class="bowling-now">
+        <td>
+          <div class="bowler-name"><span class="bowling-dot"></span><span id="bw1name">Bumrah J</span></div>
+        </td>
+        <td><span id="bw1overs">0.0</span></td>
+        <td><span id="bw1maidens">0</span></td>
+        <td><span id="bw1runs">0</span></td>
+        <td><span id="bw1wkts">0</span></td>
+        <td class="sr-good"><span id="bw1eco">0.00</span></td>
+      </tr>
+      <tr>
+        <td>
+          <div class="bowler-name"><span id="bw2name">Kuldeep Y</span></div>
+        </td>
+        <td><span id="bw2overs">2.0</span></td>
+        <td><span id="bw2maidens">0</span></td>
+        <td><span id="bw2runs">18</span></td>
+        <td><span id="bw2wkts">1</span></td>
+        <td class="sr-ok"><span id="bw2eco">9.00</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- SCORING TOGGLE -->
+<div class="toggle-scoring">
+  <div class="toggle-label">Scorer Mode</div>
+  <div class="toggle-switch" id="scorerToggle" onclick="toggleScorer()"></div>
+</div>
+
+<!-- SCORING CONTROLS -->
+<div class="scoring-panel hidden" id="scoringPanel">
+  <div class="scoring-header">
+    <span>⚡</span>
+    <h3>Live Scorer</h3>
+  </div>
+  <div class="scoring-body">
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;letter-spacing:0.5px;">RUNS</div>
+    <div class="run-buttons">
+      <button class="run-btn zero" onclick="addRun(0)">0</button>
+      <button class="run-btn one" onclick="addRun(1)">1</button>
+      <button class="run-btn two" onclick="addRun(2)">2</button>
+      <button class="run-btn three" onclick="addRun(3)">3</button>
+      <button class="run-btn four" onclick="addRun(4)">4</button>
+      <button class="run-btn" style="color:var(--accent-orange);border-color:var(--accent-orange)" onclick="addRun(5)">5</button>
+      <button class="run-btn six" onclick="addRun(6)">6</button>
+      <button class="run-btn" style="color:var(--text-muted);border-color:var(--border);font-size:13px;padding:14px 4px" onclick="addRun(7)">7+</button>
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;letter-spacing:0.5px;">EXTRAS</div>
+    <div class="extras-buttons">
+      <button class="extra-btn" onclick="addExtra('WD')">WIDE</button>
+      <button class="extra-btn" onclick="addExtra('NB')">NO BALL</button>
+      <button class="extra-btn" onclick="addExtra('BYE')">BYE</button>
+    </div>
+    <button class="wicket-btn" onclick="addWicket()">🎯 WICKET!</button>
+  </div>
+</div>
+
+<div style="height:40px"></div>
+
+<script>
+// ══════════════════════════════════════════════
+//  GAME STATE
+// ══════════════════════════════════════════════
+let state = {
+  runs: 0, wickets: 0,
+  totalBalls: 0,
+  currentOverBalls: [],
+  b1: { name:'Rohit S', runs:0, balls:0, fours:0, sixes:0 },
+  b2: { name:'Shreyas I', runs:0, balls:0, fours:0, sixes:0 },
+  bw1: { name:'Bumrah J', overs:0, balls:0, maidens:0, runs:0, wkts:0 },
+  pshipRuns: 0, pshipBalls: 0,
+  last5Runs: 0, last5Balls: 0,
+  recentBalls: []
+};
+
+let db = null, rtdb = null;
+let scorerOpen = false;
+const MATCH_ID = 'match_001';
+
+// ══════════════════════════════════════════════
+//  FIREBASE INIT
+// ══════════════════════════════════════════════
+$('#connectBtn').on('click', function() {
+  const config = {
+    apiKey: $('#fb-apiKey').val().trim(),
+    authDomain: $('#fb-authDomain').val().trim(),
+    projectId: $('#fb-projectId').val().trim(),
+    databaseURL: $('#fb-databaseURL').val().trim(),
+    storageBucket: $('#fb-storageBucket').val().trim(),
+    messagingSenderId: $('#fb-messagingSenderId').val().trim(),
+    appId: $('#fb-appId').val().trim()
+  };
+  if (!config.apiKey || !config.projectId) {
+    showNotif('API Key aur Project ID required hai!', 'red'); return;
+  }
+  try {
+    const app = firebase.initializeApp(config);
+    db = firebase.firestore();
+    rtdb = config.databaseURL ? firebase.database() : null;
+    connectFirebase();
+  } catch(e) {
+    showNotif('Firebase config galat hai: ' + e.message, 'red');
+  }
+});
+
+$('#demoBtn').on('click', function() {
+  $('#configModal').hide();
+  setFbStatus(false);
+  showNotif('Demo mode active — data local hai');
+  renderAll();
+});
+
+function connectFirebase() {
+  $('#configModal').hide();
+  setFbStatus(true);
+  showNotif('Firebase connected!');
+
+  // Firestore se initial data load
+  db.collection('matches').doc(MATCH_ID).get().then(doc => {
+    if (doc.exists) {
+      state = { ...state, ...doc.data() };
+      renderAll();
+      showNotif('Match data loaded', 'blue');
+    } else {
+      saveToFirestore();
+    }
+  }).catch(e => console.log('Firestore:', e));
+
+  // Realtime DB se live updates
+  if (rtdb) {
+    rtdb.ref('liveScore/' + MATCH_ID).on('value', snap => {
+      if (snap.val()) {
+        const live = snap.val();
+        state.runs = live.runs ?? state.runs;
+        state.wickets = live.wickets ?? state.wickets;
+        state.totalBalls = live.totalBalls ?? state.totalBalls;
+        renderScoreboard();
+      }
+    });
+  }
+}
+
+function saveToFirestore() {
+  if (!db) return;
+  db.collection('matches').doc(MATCH_ID).set(state)
+    .catch(e => console.log('Save error:', e));
+}
+
+function saveLiveScore() {
+  if (!rtdb) return;
+  rtdb.ref('liveScore/' + MATCH_ID).set({
+    runs: state.runs,
+    wickets: state.wickets,
+    totalBalls: state.totalBalls,
+    timestamp: Date.now()
+  });
+}
+
+function setFbStatus(connected) {
+  if (connected) {
+    $('#fbDot').addClass('connected');
+    $('#fbStatusText').text('Firebase Live');
+  } else {
+    $('#fbDot').removeClass('connected');
+    $('#fbStatusText').text('Demo Mode');
+  }
+}
+
+// ══════════════════════════════════════════════
+//  SCORING LOGIC
+// ══════════════════════════════════════════════
+function addRun(runs) {
+  state.runs += runs;
+  state.b1.runs += runs;
+  state.b1.balls++;
+  state.pshipRuns += runs;
+  state.pshipBalls++;
+  state.last5Runs += runs;
+  state.last5Balls++;
+  if (runs === 4) state.b1.fours++;
+  if (runs === 6) state.b1.sixes++;
+
+  let ballType = runs === 0 ? 'dot' : runs === 4 ? 'four' : runs === 6 ? 'six' : String(runs);
+  addBall(runs, ballType);
+  state.bw1.runs += runs;
+
+  if (state.currentOverBalls.length >= 6) endOver();
+  saveAll(); renderAll();
+}
+
+function addExtra(type) {
+  state.runs++;
+  state.bw1.runs++;
+  let ballType = type === 'WD' ? 'wide' : 'nb';
+  state.recentBalls.push({ type: ballType, val: type === 'WD' ? 'Wd' : 'Nb' });
+  if (state.recentBalls.length > 6) state.recentBalls.shift();
+  saveAll(); renderAll();
+  showNotif(type === 'WD' ? 'Wide — 1 run added' : 'No Ball — 1 run added');
+}
+
+function addWicket() {
+  state.wickets++;
+  state.bw1.wkts++;
+  state.b1.balls++;
+  state.pshipBalls++;
+  addBall(0, 'wicket');
+  if (state.currentOverBalls.length >= 6) endOver();
+
+  let outName = state.b1.name;
+  let temp = state.b1.name;
+  state.b1.name = 'New Batsman';
+  state.b1.runs = 0; state.b1.balls = 0; state.b1.fours = 0; state.b1.sixes = 0;
+  state.pshipRuns = 0; state.pshipBalls = 0;
+  saveAll(); renderAll();
+  showNotif('WICKET! ' + outName + ' is OUT!', 'red');
+}
+
+function addBall(runs, type) {
+  state.totalBalls++;
+  let val = type === 'dot' ? '•' : type === 'wicket' ? 'W' : type === 'four' ? '4' : type === 'six' ? '6' : String(runs);
+  state.currentOverBalls.push({ type, val });
+  state.recentBalls.push({ type, val });
+  if (state.recentBalls.length > 8) state.recentBalls.shift();
+}
+
+function endOver() {
+  state.bw1.overs++;
+  state.bw1.balls = 0;
+  if (state.bw1.runs === 0) state.bw1.maidens++;
+  state.currentOverBalls = [];
+  state.last5Runs = 0; state.last5Balls = 0;
+  swapBatsmen();
+  showNotif('Over complete!', 'blue');
+}
+
+function swapBatsmen() {
+  let tmp = state.b1;
+  state.b1 = state.b2;
+  state.b2 = tmp;
+}
+
+// ══════════════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════════════
+function renderAll() {
+  renderScoreboard();
+  renderBatters();
+  renderBowlers();
+  renderBalls();
+  renderRates();
+  renderPartnership();
+}
+
+function renderScoreboard() {
+  $('#totalRuns').text(state.runs);
+  $('#totalWickets').text(state.wickets);
+  let ov = Math.floor(state.totalBalls / 6);
+  let bl = state.totalBalls % 6;
+  $('#totalOvers').text(ov);
+  $('#totalBalls').text(bl);
+}
+
+function renderBatters() {
+  $('#b1name').text(state.b1.name);
+  $('#b1runs').text(state.b1.runs);
+  $('#b1balls').text(state.b1.balls);
+  $('#b1fours').text(state.b1.fours);
+  $('#b1sixes').text(state.b1.sixes);
+  let sr1 = state.b1.balls > 0 ? ((state.b1.runs / state.b1.balls) * 100).toFixed(1) : '0.0';
+  $('#b1sr').text(sr1);
+
+  $('#b2name').text(state.b2.name);
+  $('#b2runs').text(state.b2.runs);
+  $('#b2balls').text(state.b2.balls);
+  $('#b2fours').text(state.b2.fours);
+  $('#b2sixes').text(state.b2.sixes);
+  let sr2 = state.b2.balls > 0 ? ((state.b2.runs / state.b2.balls) * 100).toFixed(1) : '0.0';
+  $('#b2sr').text(sr2);
+}
+
+function renderBowlers() {
+  $('#bw1name').text(state.bw1.name);
+  let ov = state.bw1.overs + (state.currentOverBalls.length / 10);
+  $('#bw1overs').text(state.bw1.overs + '.' + state.currentOverBalls.length);
+  $('#bw1maidens').text(state.bw1.maidens);
+  $('#bw1runs').text(state.bw1.runs);
+  $('#bw1wkts').text(state.bw1.wkts);
+  let balls = state.bw1.overs * 6 + state.currentOverBalls.length;
+  let eco = balls > 0 ? ((state.bw1.runs / balls) * 6).toFixed(2) : '0.00';
+  $('#bw1eco').text(eco);
+}
+
+function renderBalls() {
+  let html = '';
+  if (state.currentOverBalls.length === 0) {
+    html = '<div class="ball dot">•</div>';
+  } else {
+    state.currentOverBalls.forEach(b => {
+      html += `<div class="ball ${b.type}">${b.val}</div>`;
+    });
+  }
+  $('#ballsRow').html(html);
+}
+
+function renderRates() {
+  let crr = state.totalBalls > 0 ? ((state.runs / state.totalBalls) * 6).toFixed(2) : '0.00';
+  let last5 = state.last5Balls > 0 ? ((state.last5Runs / state.last5Balls) * 6).toFixed(2) : '0.00';
+  let proj = state.totalBalls > 0 ? Math.round((state.runs / state.totalBalls) * 120) : 0;
+  $('#crr').text(crr);
+  $('#last5').text(last5);
+  $('#projected').text(proj);
+}
+
+function renderPartnership() {
+  $('#pshipRuns').text(state.pshipRuns);
+  $('#pshipBalls').text(state.pshipBalls);
+  let pct = Math.min((state.pshipRuns / Math.max(state.runs, 1)) * 100, 100);
+  $('#pshipFill').css('width', pct + '%');
+}
+
+// ══════════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════════
+function saveAll() {
+  saveToFirestore();
+  saveLiveScore();
+}
+
+function toggleScorer() {
+  scorerOpen = !scorerOpen;
+  $('#scorerToggle').toggleClass('on', scorerOpen);
+  $('#scoringPanel').toggleClass('hidden', !scorerOpen);
+}
+
+function showNotif(msg, type='') {
+  let $n = $('#notif');
+  $n.removeClass('red blue').text(msg);
+  if (type === 'red') $n.addClass('red');
+  if (type === 'blue') $n.addClass('blue');
+  $n.addClass('show');
+  setTimeout(() => $n.removeClass('show'), 2500);
+}
+
+// Init render
+renderAll();
+</script>
+</body>
+</html>
