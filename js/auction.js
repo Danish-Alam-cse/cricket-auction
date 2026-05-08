@@ -987,7 +987,7 @@ $(document).ready(function () {
             strikersRoster.push({ name: currentPlayer.name, category: currentPlayer.category, price: bid });
         }
 
-        const teamLabel = team === "Hunters" ? "🦅 Danish Dominators" : "⚡ Zaki Zenith";
+        const teamLabel = team === "Hunters" ? "🦅 Shahab Smashers" : "⚡ Zaki Zenith";
         addLog(team === "Hunters" ? "🦅" : "⚡", currentPlayer.name, teamLabel, bid + "L");
         _lastSold._cat = currentPlayer.category;   // store category for canvas
         showSoldOverlay(currentPlayer.name, bid, teamLabel, currentPlayer.img || "", team,currentPlayer.category);
@@ -1109,7 +1109,7 @@ $(document).ready(function () {
 
         const wb = XLSX.utils.book_new();
         [
-            { data: huntersData,  name: "Danish Dominators" },
+            { data: huntersData,  name: "Shahab Smashers" },
             { data: strikersData, name: "Zaki Zenith"   },
             { data: unsoldData,   name: "Unsold Players"  },
             { data: logData,      name: "Auction Log"     }
